@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Lucidchart bulk import</title>
+	<meta charset="UTF-8">
+	<script>var mxBasePath = '/mxgraph';</script>
+	<script src="/js/app.min.js"></script>
+	<script src="/js/extensions.min.js"></script>
+	<style>
+		body { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 14px; max-width: 900px; margin: 30px auto; padding: 0 16px; color: #222; }
+		h1 { font-size: 20px; }
+		h2 { font-size: 15px; margin-top: 28px; }
+		textarea { width: 100%; height: 110px; font-family: Menlo, monospace; font-size: 11px; }
+		button { font-size: 14px; padding: 6px 14px; }
+		pre { background: #f4f4f4; padding: 10px; white-space: pre-wrap; min-height: 40px; }
+		.fail { color: #b00020; }
+		.note { color: #555; }
+	</style>
+</head>
+<body>
+	<h1>Lucidchart &rarr; draw.io bulk import</h1>
+
+	<h2>Step 1 &mdash; export from Lucid</h2>
+	<p>Open <a href="https://lucid.app/documents" target="_blank">lucid.app</a> (logged in), press <b>&#8984;&#8997;J</b> to open the DevTools Console, paste this snippet, press Enter. It downloads <code>lucid-export.json</code>.</p>
+	<textarea id="snippet" readonly>loading…</textarea>
+	<button id="copy">Copy snippet</button>
+	<p class="note">If the console shows a CORS error, open the URL it printed for the document list directly in a new tab and re-run the snippet from that tab instead.</p>
+
+	<h2>Step 2 &mdash; convert to .drawio files</h2>
+	<p>Pick the downloaded <code>lucid-export.json</code>, then convert. You get a zip of <code>.drawio</code> files with your Lucid folder structure. Unzip it and drag the folders into Nextcloud Files.</p>
+	<input type="file" id="file" accept=".json,application/json">
+	<button id="go" disabled>Convert to .drawio zip</button>
+	<pre id="log"></pre>
+
+	<script>
+		var logEl = document.getElementById('log');
+		function log(s, cls) { var d = document.createElement('div'); if (cls) d.className = cls; d.textContent = s; logEl.appendChild(d); }
+
+		fetch('/lucid-export.js').then(function (r) { return r.text(); }).then(function (t) { document.getElementById('snippet').value = t; });
+		document.getElementById('copy').onclick = function () {
+			var ta = document.getElementById('snippet'); ta.select(); navigator.clipboard.writeText(ta.value);
+			this.textContent = 'Copied'; var b = this; setTimeout(function () { b.textContent = 'Copy snippet'; }, 1500);
+		};
+
+		var data = null;
+		document.getElementById('file').onchange = function (e) {
+			var f = e.target.files[0]; if (!f) return;
+			f.text().then(function (t) {
+				data = JSON.parse(t);
+				logEl.textContent = '';
+				log('Loaded ' + data.docs.length + ' diagrams from ' + f.name + (data.failed && data.failed.length ? ' (' + data.failed.length + ' failed during Lucid export)' : ''));
+				document.getElementById('go').disabled = false;
+			});
+		};
+
+		document.getElementById('go').onclick = function () {
+			if (typeof JSZip === 'undefined' || typeof LucidImporter === 'undefined') { log('The converter libraries did not load — reload this page.', 'fail'); return; }
+			var zip = new JSZip(), ok = 0;
+			data.docs.forEach(function (d) {
+				try { zip.file(d.path + '.drawio', LucidImporter.importState(d.state)); ok++; }
+				catch (err) { console.error(d.path, err); log('FAILED: ' + d.path + ' — ' + (err && err.message || err), 'fail'); }
+			});
+			log('Converted ' + ok + ' / ' + data.docs.length);
+			zip.generateAsync({ type: 'blob' }).then(function (blob) {
+				var a = document.createElement('a');
+				a.href = URL.createObjectURL(blob); a.download = 'lucid-drawio-export.zip';
+				document.body.appendChild(a); a.click();
+				setTimeout(function () { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
+			});
+		};
+	</script>
+</body>
+</html>

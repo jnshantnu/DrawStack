@@ -1,0 +1,49 @@
+name: drawstack
+
+services:
+  nextcloud:
+    # jgraph/drawio-nextcloud (the vendor Nextcloud integration app) pins to
+    # Nextcloud 33 exactly (min-version=33, max-version=33 in its info.xml),
+    # so 29 -- what an earlier planning pass assumed -- can't run it.
+    image: nextcloud:33-apache
+    restart: unless-stopped
+    ports:
+      # 127.0.0.1:8080 is already taken by the existing vmc service (see
+      # Caddyfile /vmc route) -- 8180 avoids that collision.
+      - "127.0.0.1:8180:80"
+    volumes:
+      - ./nextcloud/html:/var/www/html
+      - ./nextcloud/data:/var/www/html/data
+      - ./nextcloud/config:/var/www/html/config
+    environment:
+      - SQLITE_DATABASE=nextcloud
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_TRUSTED_DOMAINS=vmi3383203.contaboserver.net
+      - OVERWRITEPROTOCOL=https
+      - OVERWRITEHOST=vmi3383203.contaboserver.net:8443
+      - OVERWRITECLIURL=https://vmi3383203.contaboserver.net:8443
+      # Caddy reaches the container via docker-proxy, so Nextcloud sees the
+      # bridge gateway (172.18.0.1), not 127.0.0.1. 172.16.0.0/12 covers every
+      # default Docker subnet, so this survives the network being recreated.
+      - TRUSTED_PROXIES=127.0.0.1 172.16.0.0/12
+      - PHP_UPLOAD_LIMIT=2G
+      - PHP_MEMORY_LIMIT=512M
+
+  drawio:
+    image: jgraph/drawio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      # Self-hosted replacement for app.diagrams.net/tools/lucid/import.html
+      - ./lucid-bulk.html:/usr/local/tomcat/webapps/draw/lucid-bulk.html:ro
+      - ./lucid-export.js:/usr/local/tomcat/webapps/draw/lucid-export.js:ro
+    environment:
+      # jgraph/export-server has reached end-of-life and is no longer built
+      # or wired up by the drawio image (EXPORT_URL has no effect anymore).
+      # Server-rendered PNG/PDF export doesn't exist in current drawio
+      # images; the editor falls back to client-side PNG/JPEG/SVG export
+      # and the browser print dialog for PDF. DRAWIO_BASE_URL just points
+      # the viewer/lightbox code at the real public URL.
+      - DRAWIO_BASE_URL=https://vmi3383203.contaboserver.net:8444

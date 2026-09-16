@@ -1,0 +1,9 @@
+# Secrets — never commit
+.env
+
+# Nextcloud's own install, config, and your actual files/diagrams.
+# This is vendored app code + live data, not part of this project.
+nextcloud/
+
+# Scratch files
+*.log

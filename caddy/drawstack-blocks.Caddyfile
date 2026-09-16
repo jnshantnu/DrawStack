@@ -1,0 +1,21 @@
+# Reference copy only — NOT live. The authoritative file is /etc/caddy/Caddyfile
+# on the VPS, shared with your other sites (vmc, discord, flashcards, etc).
+# These two blocks are appended at the end of that file. If you edit here,
+# you must copy the change into /etc/caddy/Caddyfile yourself and reload caddy.
+# Last synced: 2026-09-15T23:00:06Z
+
+vmi3383203.contaboserver.net:8443 {
+	log {
+		output file /var/log/caddy/drawio-access.log {
+			roll_size 20mb
+			roll_keep 30
+			roll_keep_for 168h
+		}
+		format json
+	}
+
+	reverse_proxy 127.0.0.1:8180
+}
+vmi3383203.contaboserver.net:8444 {
+	reverse_proxy 127.0.0.1:8081
+}
