@@ -12,6 +12,26 @@ diagrams organized into folders, and a canvas editor. Bare draw.io is only
 the second — it has no document library at all. This project wires the two
 together, self-hosted, on infrastructure already running other services.
 
+## Screenshots
+
+| Login | Document library | Editor |
+|---|---|---|
+| ![Login](assets/login.png) | ![Files](assets/files.png) | ![Editor](assets/editor.png) |
+
+(The editor screenshot is a diagram of DrawStack's own architecture, made
+in DrawStack — not a real client diagram, since those live under folders
+that stay private.)
+
+## Prerequisites
+
+- Docker Engine + Compose v2. Install via
+  [Docker's official apt repo](https://docs.docker.com/engine/install/ubuntu/) —
+  not the Ubuntu-default `docker.io` package or the snap build, both of
+  which lag behind and complicate volume/network behavior.
+- A reverse proxy already terminating TLS for your domain (this project
+  assumes Caddy, but anything that can proxy two ports to two containers
+  works). Nextcloud and draw.io themselves don't handle HTTPS here.
+
 ## Architecture
 
 ```mermaid
